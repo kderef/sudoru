@@ -1,14 +1,30 @@
 use crate::{
-    board::{self, Board, Cell, PlaceError, nearest_multiple},
-    layout,
+    board::{Board, Cell, PlaceError},
+    theme,
 };
 use macroquad::prelude::*;
 
 use crate::theme::Theme;
 
+pub fn screen_size() -> (f32, f32) {
+    (screen_width(), screen_height())
+}
+
+pub fn board_layout(screen_width: f32, padding: f32) -> Rect {
+    let w = screen_width - padding * 2.;
+
+    Rect {
+        x: padding,
+        y: padding,
+        w,
+        h: w,
+    }
+}
+
 #[derive(Clone, Copy, Default)]
 pub struct UI {
-    pub theme: Theme,
+    pub themes: (Theme, Theme),
+
     pub board_layout: Rect,
     pub padding: f32,
     pub selected_cell: Option<usize>,
@@ -19,19 +35,33 @@ pub struct UI {
 }
 
 impl UI {
-    pub fn new(theme: Theme) -> Self {
+    pub fn new() -> Self {
         Self {
-            theme,
+            themes: (theme::LIGHT, theme::DARK),
             ..Default::default()
         }
     }
+
+    pub fn cycle_theme(&mut self) {
+        self.themes = (self.themes.1, self.themes.0);
+    }
+
+    pub fn theme(&self) -> &Theme {
+        &self.themes.0
+    }
+
     pub fn update(&mut self) {
-        let new_screen_size = layout::screen_size().into();
+        // toggle theme
+        if is_key_pressed(KeyCode::T) {
+            self.cycle_theme();
+        }
+
+        let new_screen_size = screen_size().into();
         if new_screen_size != self.screen_size {
             self.screen_size = new_screen_size;
             // recalc
-            self.padding = self.theme.padding * self.screen_size.x;
-            self.board_layout = layout::board(self.screen_size.x, self.padding);
+            self.padding = self.theme().padding * self.screen_size.x;
+            self.board_layout = board_layout(self.screen_size.x, self.padding);
             self.font_size = (0.05 * self.board_layout.w) as u16;
         }
 

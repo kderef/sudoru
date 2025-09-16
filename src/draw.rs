@@ -1,19 +1,18 @@
 use crate::board::CELL_STR;
-use crate::board::{self, HEIGHT, WIDTH};
 use crate::ui::UI;
-use crate::{board::Board, layout, theme::Theme};
+use crate::{board::Board, theme::Theme};
 use macroquad::prelude::*;
 
 impl UI {
-    pub fn draw_borders(&self) {
+    pub fn draw_borders(&self, _board: &Board) {
         let Rect { x, y, w, h } = self.board_layout;
         draw_rectangle_lines(
             x, //
             y,
             w,
             h,
-            self.theme.border_thick,
-            self.theme.border_color,
+            self.theme().border_thick,
+            self.theme().border_color,
         );
     }
 
@@ -28,9 +27,9 @@ impl UI {
 
         let text_pos = cell.center() - offset;
         let color = if highlight {
-            self.theme.cell_highlight
+            self.theme().cell_highlight
         } else {
-            self.theme.cell_fg
+            self.theme().cell_fg
         };
 
         draw_text_ex(
@@ -52,6 +51,14 @@ impl UI {
 
         let mut cell = Rect::new(start_x, start_y, cell_size, cell_size);
 
+        // Draw the selected cell
+        if let Some(pos) = self.selected_cell {
+            let (x, y) = (pos % board.height(), pos / board.width());
+            let (x, y) = (x as f32 * cell.w + start_x, y as f32 * cell.h + start_y);
+
+            draw_rectangle(x, y, cell.w, cell.h, self.theme().selected_bg);
+        }
+
         for y in 0..board.height() {
             for x in 0..board.width() {
                 if let Some(Some(num)) = board.get(x, y) {
@@ -65,22 +72,17 @@ impl UI {
         }
     }
 
-    pub fn draw_squares(&self, board: &Board) {
-        let Theme {
+    pub fn draw_squares(&self, _board: &Board) {
+        let &Theme {
             square_thick,
             square_color: square,
             cell_thick,
-            cell_bg: cell_color,
+            cell_border: cell_color,
             ..
-        } = self.theme;
+        } = self.theme();
 
         let size = self.board_layout.w / 3.;
         let cell_size = size / 3.;
-
-        let selected_pos = self.selected_cell.map(|pos| {
-            // transform to point
-            (pos % board::HEIGHT, pos / board::WIDTH)
-        });
 
         for row in 0..3 {
             for col in 0..3 {
@@ -102,17 +104,9 @@ impl UI {
                         draw_rectangle_lines(
                             cell.x, cell.y, cell.w, cell.h, cell_thick, cell_color,
                         );
-
-                        let actual_pos = (col * 3 + cell_col, row * 3 + cell_row);
-                        if Some(actual_pos) == selected_pos {
-                            draw_rectangle(cell.x, cell.y, cell.w, cell.h, self.theme.selected_bg);
-                        }
-                        // TODO: draw cell numbers
                     }
                 }
             }
         }
-
-        self.draw_cells(board);
     }
 }

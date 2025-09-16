@@ -1,8 +1,9 @@
-use macroquad::prelude::*;
 use std::fmt::Display;
 
 pub type Cell = Option<u8>;
 
+/// indexed by a number of 0..9 - 1
+/// example: CELL_STR[2 - 1] == "2"
 pub static CELL_STR: [&str; 9] = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
 
 pub const SEGMENTS: usize = 3;
@@ -10,21 +11,13 @@ pub const WIDTH: usize = 9;
 pub const HEIGHT: usize = 9;
 pub const SIZE: usize = WIDTH * HEIGHT;
 
+/// Failed to place a number in a cell
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 pub enum PlaceError {
     AlreadyInCell,
     AlreadyInRow,
     AlreadyInCol,
     AlreadyInSeg,
-}
-
-pub fn nearest_multiple(n: usize, base: usize) -> usize {
-    let remainder = n % base;
-    if remainder * 2 < base {
-        n.checked_sub(remainder).unwrap_or(0)
-    } else {
-        n.checked_sub(base + remainder).unwrap_or(0)
-    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -42,18 +35,16 @@ impl Board {
         HEIGHT
     }
     pub const fn size(&self) -> usize {
-        SIZE
+        self.width() * self.height()
     }
 
+    #[inline]
     pub const fn index(&self, x: usize, y: usize) -> usize {
         x + y * self.width()
     }
+    #[inline]
     pub fn cell_pos(&self, index: usize) -> (usize, usize) {
         (index % self.height(), index / self.width())
-    }
-    pub fn cell_pos_vec(&self, index: usize) -> Vec2 {
-        let pos = self.cell_pos(index);
-        vec2(pos.0 as f32, pos.1 as f32)
     }
 
     pub fn row(&self, index: usize) -> &[Cell] {
@@ -70,8 +61,9 @@ impl Board {
         cells
     }
 
+    /// round to the position of the nearest segment (1, 2) -> (0, 3)
     pub fn segment_pos(&self, x: usize, y: usize) -> (usize, usize) {
-        (x - x % 3, y - y % 3)
+        (x - x % SEGMENTS, y - y % SEGMENTS)
     }
 
     pub fn segment(&self, index: usize) -> [Cell; 9] {
@@ -115,25 +107,19 @@ impl Board {
         Ok(())
     }
     pub fn place_at(&mut self, x: usize, y: usize, cell: Cell) -> Result<(), PlaceError> {
-        self.place(y * self.width() + x, cell)
+        self.place(self.index(x, y), cell)
     }
 
     pub fn get(&self, x: usize, y: usize) -> Option<&Cell> {
-        self.cells.get(y * WIDTH + x)
-    }
-    pub fn square(&mut self, index: usize) -> &mut [Cell] {
-        todo!()
-    }
-    pub fn set(&mut self, x: usize, y: usize, value: Cell) {
-        self.cells[self.index(x, y)] = value;
+        self.cells.get(self.index(x, y))
     }
 }
 
 impl Display for Board {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let width = 3;
-        let height = 3;
-        let size = width * height;
+        let width = self.width();
+        let height = self.height();
+        let size = self.size();
 
         for (i, row) in self.cells.chunks_exact(size).enumerate() {
             if i % height == 0 && i != 0 {

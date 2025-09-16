@@ -9,20 +9,10 @@ pub fn screen_size() -> (f32, f32) {
     (screen_width(), screen_height())
 }
 
-pub fn board(screen_width: f32, padding: f32) -> Rect {
-    let w = screen_width - padding * 2.;
-
-    Rect {
-        x: padding,
-        y: padding,
-        w,
-        h: w,
-    }
-}
-
 impl Board {
     pub fn draw(&self, ui: &UI) {
-        ui.draw_borders();
+        ui.draw_cells(self);
+        ui.draw_borders(self);
         ui.draw_squares(self);
     }
 }
