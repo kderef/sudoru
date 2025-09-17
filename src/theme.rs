@@ -24,6 +24,11 @@ impl Default for Theme {
         LIGHT
     }
 }
+impl Default for &'static Theme {
+    fn default() -> Self {
+        &LIGHT
+    }
+}
 
 const fn rgba(r: f32, g: f32, b: f32, a: f32) -> Color {
     Color { r, g, b, a }

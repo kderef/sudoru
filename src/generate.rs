@@ -2,6 +2,7 @@ use rand::Rng;
 
 use crate::board::{Board, Position};
 
+#[allow(dead_code)]
 #[derive(Clone, Copy)]
 pub enum Strategy {
     /// Try to insert and ignore if it fails

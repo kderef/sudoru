@@ -24,7 +24,7 @@ pub fn board_layout(screen_size: Vec2, padding: f32) -> Rect {
 
 #[derive(Clone, Default)]
 pub struct UI {
-    pub themes: (Theme, Theme),
+    pub themes: (&'static Theme, &'static Theme),
 
     pub board_layout: Rect,
     pub padding: f32,
@@ -38,7 +38,7 @@ pub struct UI {
 impl UI {
     pub fn new() -> Self {
         Self {
-            themes: (theme::LIGHT, theme::DARK),
+            themes: (&theme::LIGHT, &theme::DARK),
             ..Default::default()
         }
     }
@@ -48,7 +48,7 @@ impl UI {
     }
 
     pub fn theme(&self) -> &Theme {
-        &self.themes.0
+        self.themes.0
     }
 
     pub fn update(&mut self) {
@@ -126,10 +126,8 @@ impl UI {
         let cell_size = self.board_layout.w / 9.;
         let pos = mouse_pos - self.board_layout.point();
 
-        let index_x = (pos.x / cell_size).floor() as usize;
-        let index_y = (pos.y / cell_size).floor() as usize;
-
-        let index = index_x + index_y * 9;
+        let index = (pos / cell_size).floor();
+        let index = index.x as usize + index.y as usize * 9;
 
         Some(index)
     }
