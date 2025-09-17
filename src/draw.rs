@@ -1,4 +1,4 @@
-use crate::board::CELL_STR;
+use crate::board::{CELL_STR, Position};
 use crate::ui::UI;
 use crate::{board::Board, theme::Theme};
 use macroquad::prelude::*;
@@ -61,14 +61,26 @@ impl UI {
 
         for y in 0..board.height() {
             for x in 0..board.width() {
-                if let Some(Some(num)) = board.get(x, y) {
-                    let highlight = Some(board.index(x, y)) == self.highlighted_cell;
+                let index = (x, y).index();
+                if let Some(Some(num)) = board.get(index) {
+                    let highlight = Some(index) == self.highlighted_cell;
                     self.draw_cell_num(cell, *num, highlight);
                 }
                 cell.x += cell.w;
             }
             cell.x = start_x;
             cell.y += cell.h;
+        }
+    }
+
+    pub fn handle_input(&mut self, board: &mut Board) {
+        if let Some((index, num)) = self.insert_num() {
+            if let Err(e) = board.place(index, Some(num)) {
+                println!("{index} => {e:?}");
+                self.highlight(&board, index, Some(num), e);
+            } else {
+                self.highlighted_cell = None;
+            }
         }
     }
 

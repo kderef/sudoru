@@ -4,14 +4,15 @@ use crate::{
 };
 use macroquad::prelude::*;
 
+use crate::board::Position;
 use crate::theme::Theme;
 
 pub fn screen_size() -> (f32, f32) {
     (screen_width(), screen_height())
 }
 
-pub fn board_layout(screen_width: f32, padding: f32) -> Rect {
-    let w = screen_width - padding * 2.;
+pub fn board_layout(screen_size: Vec2, padding: f32) -> Rect {
+    let w = screen_size.min_element() - padding * 2.;
 
     Rect {
         x: padding,
@@ -21,7 +22,7 @@ pub fn board_layout(screen_width: f32, padding: f32) -> Rect {
     }
 }
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Default)]
 pub struct UI {
     pub themes: (Theme, Theme),
 
@@ -61,20 +62,19 @@ impl UI {
             self.screen_size = new_screen_size;
             // recalc
             self.padding = self.theme().padding * self.screen_size.x;
-            self.board_layout = board_layout(self.screen_size.x, self.padding);
+            self.board_layout = board_layout(self.screen_size, self.padding);
             self.font_size = (0.05 * self.board_layout.w) as u16;
         }
 
         // cell selection
-        if let sel @ Some(_) = self.get_cell_clicked() {
-            if sel == self.selected_cell {
+        if let Some(sel) = self.get_cell_clicked() {
+            if self.selected_cell == Some(sel.index()) {
                 self.selected_cell = None;
             } else {
-                self.selected_cell = sel;
+                self.selected_cell = Some(sel.index());
             }
         }
     }
-
     pub fn insert_num(&self) -> Option<(usize, u8)> {
         if let Some(selected) = self.selected_cell {
             if let Some(num) = self.num_key_clicked() {
@@ -84,7 +84,7 @@ impl UI {
         None
     }
 
-    pub fn highlight(&mut self, board: &Board, index: usize, value: Cell, err: PlaceError) {
+    pub fn highlight(&mut self, board: &Board, index: impl Position, value: Cell, err: PlaceError) {
         // find offending cell
         let victim = value;
         let find = |group: &[Cell]| {
@@ -95,23 +95,23 @@ impl UI {
                 .map(|c| c.0)
                 .unwrap()
         };
-        let (x, y) = board.cell_pos(index);
+        let (x, y) = index.coords();
 
         let offender = match err {
-            PlaceError::AlreadyInCell => index,
-            PlaceError::AlreadyInRow => board.index(find(board.row(index)), y),
-            PlaceError::AlreadyInCol => board.index(x, find(&board.col(index))),
+            PlaceError::AlreadyInCell => index.index(),
+            PlaceError::AlreadyInRow => (find(board.row(index)), y).index(),
+            PlaceError::AlreadyInCol => (x, find(&board.col(index))).index(),
             PlaceError::AlreadyInSeg => {
-                let (seg_x, seg_y) = board.segment_pos(x, y);
+                let (seg_x, seg_y) = index.segment().coords();
                 let seg_index = find(&board.segment(index));
-                board.index(seg_x + seg_index % 3, seg_y + seg_index / 3)
+                (seg_x + seg_index % 3, seg_y + seg_index / 3).index()
             }
         };
 
         self.highlighted_cell = Some(offender);
     }
 
-    pub fn get_cell_clicked(&self) -> Option<usize> {
+    pub fn get_cell_clicked(&self) -> Option<impl Position> {
         let mouse_clicked = is_mouse_button_pressed(MouseButton::Left);
 
         if !mouse_clicked {

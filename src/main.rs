@@ -7,6 +7,7 @@ mod test;
 mod theme;
 mod ui;
 
+use generate::Strategy;
 use macroquad::prelude::*;
 
 fn app() -> Conf {
@@ -24,29 +25,21 @@ fn app() -> Conf {
 
 #[macroquad::main(app)]
 async fn main() {
-    let mut board = generate::generate_board();
+    let gen_strategy = Strategy::TryRandomSparse;
+    let mut board = generate::generate_board(gen_strategy);
 
     let mut ui = ui::UI::new();
 
     println!("{board}");
 
     loop {
-        // update
         ui.update();
 
         clear_background(ui.theme().bg);
         ui.draw_cells(&board);
         ui.draw_borders(&board);
         ui.draw_squares(&board);
-
-        if let Some((index, num)) = ui.insert_num() {
-            if let Err(e) = board.place(index, Some(num)) {
-                println!("{index} => {e:?}");
-                ui.highlight(&board, index, Some(num), e);
-            } else {
-                ui.highlighted_cell = None;
-            }
-        }
+        ui.handle_input(&mut board);
 
         next_frame().await;
     }
