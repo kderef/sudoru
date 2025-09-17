@@ -92,7 +92,6 @@ impl Board {
         if self.cells[index] == cell {
             return Err(PlaceError::AlreadyInCell);
         }
-
         if self.row(index).contains(&cell) {
             return Err(PlaceError::AlreadyInRow);
         }
