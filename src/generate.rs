@@ -39,7 +39,5 @@ pub fn generate_board(strategy: Strategy) -> Board {
         }
     }
 
-    // strategy: try to place a number or skip it if it fails.
-
     board
 }

@@ -22,7 +22,7 @@ pub fn board_layout(screen_size: Vec2, padding: f32) -> Rect {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct UI {
     pub themes: (&'static Theme, &'static Theme),
 
@@ -33,13 +33,23 @@ pub struct UI {
     pub font_size: u16,
 
     pub highlighted_cell: Option<usize>,
+    pub board_texture: RenderTarget,
+    pub redraw: bool,
 }
 
 impl UI {
     pub fn new() -> Self {
         Self {
             themes: (&theme::LIGHT, &theme::DARK),
-            ..Default::default()
+            board_layout: Rect::default(),
+            padding: 0.,
+            selected_cell: None,
+            screen_size: Vec2::ZERO,
+            font_size: 0,
+
+            highlighted_cell: None,
+            board_texture: render_target(1, 1),
+            redraw: false,
         }
     }
 
@@ -52,26 +62,48 @@ impl UI {
     }
 
     pub fn update(&mut self) {
+        self.redraw = false;
+
         // toggle theme
         if is_key_pressed(KeyCode::T) {
             self.cycle_theme();
+            self.redraw = true;
         }
 
         let new_screen_size = screen_size().into();
         if new_screen_size != self.screen_size {
             self.screen_size = new_screen_size;
-            // recalc
+
+            let dpi = screen_dpi_scale();
+            self.redraw = true;
+
+            // update drawing info
             self.padding = self.theme().padding * self.screen_size.x;
             self.board_layout = board_layout(self.screen_size, self.padding);
             self.font_size = (0.05 * self.board_layout.w) as u16;
+
+            // update render target
+            let size = self.board_layout.size();
+            let (target_w, target_h) = size.into();
+
+            self.board_texture = render_target_ex(
+                target_w as u32,
+                target_h as u32,
+                RenderTargetParams {
+                    sample_count: 4,
+                    depth: false,
+                },
+            );
         }
 
         // cell selection
         if let Some(sel) = self.get_cell_clicked() {
             if self.selected_cell == Some(sel.index()) {
                 self.selected_cell = None;
+                self.redraw = true;
             } else {
                 self.selected_cell = Some(sel.index());
+                self.redraw = true;
             }
         }
     }

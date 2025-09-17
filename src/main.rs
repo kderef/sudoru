@@ -7,8 +7,11 @@ mod test;
 mod theme;
 mod ui;
 
+use std::{thread::sleep, time::Duration};
+
 use generate::Strategy;
-use macroquad::prelude::*;
+use macroquad::{miniquad::conf::Platform, prelude::*};
+use ui::UI;
 
 fn app() -> Conf {
     Conf {
@@ -18,7 +21,11 @@ fn app() -> Conf {
         window_resizable: true,
         sample_count: 4,
         high_dpi: true,
+        platform: Platform {
+            swap_interval: Some(-1),
 
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -28,19 +35,22 @@ async fn main() {
     let gen_strategy = Strategy::TryRandomSparse;
     let mut board = generate::generate_board(gen_strategy);
 
-    let mut ui = ui::UI::new();
+    let mut ui = UI::new();
 
-    println!("{board}");
+    let min_frame_time = 1. / 30.;
 
     loop {
+        let frame_time = get_frame_time();
+
         ui.update();
 
-        clear_background(ui.theme().bg);
-        ui.draw_cells(&board);
-        ui.draw_borders(&board);
-        ui.draw_squares(&board);
-        ui.handle_input(&mut board);
+        ui.draw(&mut board);
 
+        // sleep for CPU's sake
+        if frame_time < min_frame_time {
+            let sleep_time = (min_frame_time - frame_time) * 1000.;
+            sleep(Duration::from_millis(sleep_time as u64));
+        }
         next_frame().await;
     }
 }

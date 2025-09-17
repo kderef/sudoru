@@ -5,14 +5,56 @@ use macroquad::prelude::*;
 
 impl UI {
     pub fn draw_borders(&self, _board: &Board) {
-        let Rect { x, y, w, h } = self.board_layout;
+        let Rect { w, h, x, y } = self.board_layout;
         draw_rectangle_lines(
-            x, //
-            y,
+            0., //
+            0.,
             w,
             h,
             self.theme().border_thick,
             self.theme().border_color,
+        );
+    }
+
+    pub fn draw(&mut self, board: &mut Board) {
+        clear_background(self.theme().bg);
+        let dpi = screen_dpi_scale();
+
+        self.handle_input(board);
+
+        if self.redraw {
+            let tex_size = self.board_texture.texture.size();
+            let zoom = dpi / tex_size.min_element();
+
+            set_camera(&Camera2D {
+                zoom: vec2(zoom, zoom),
+                target: tex_size / 2.0,
+                render_target: Some(self.board_texture.clone()),
+
+                ..Default::default()
+            });
+            clear_background(self.theme().bg);
+
+            self.draw_cells(board); // draw cells first to avoid overlap
+            self.draw_borders(board);
+            self.draw_squares(board);
+
+            set_default_camera();
+        }
+
+        let Vec2 { x, y } = self.board_layout.point();
+        let size = self.board_layout.size();
+        let texture = &self.board_texture.texture;
+
+        draw_texture_ex(
+            texture,
+            x,
+            y,
+            WHITE,
+            DrawTextureParams {
+                dest_size: Some(size),
+                ..Default::default()
+            },
         );
     }
 
@@ -45,9 +87,11 @@ impl UI {
         );
     }
     pub fn draw_cells(&self, board: &Board) {
-        let cell_size = self.board_layout.w / 9.;
-        let start_x = self.board_layout.x;
-        let start_y = self.board_layout.y;
+        let width = self.board_texture.texture.width();
+
+        let cell_size = width / 9.;
+        let start_x = 0.; //self.board_layout.x;
+        let start_y = 0.; //self.board_layout.y;
 
         let mut cell = Rect::new(start_x, start_y, cell_size, cell_size);
 
@@ -75,6 +119,7 @@ impl UI {
 
     pub fn handle_input(&mut self, board: &mut Board) {
         if let Some((index, num)) = self.insert_num() {
+            self.redraw = true;
             if let Err(e) = board.place(index, Some(num)) {
                 println!("{index} => {e:?}");
                 self.highlight(&board, index, Some(num), e);
@@ -85,6 +130,8 @@ impl UI {
     }
 
     pub fn draw_squares(&self, _board: &Board) {
+        let width = self.board_texture.texture.width();
+
         let &Theme {
             square_thick,
             square_color: square,
@@ -93,14 +140,14 @@ impl UI {
             ..
         } = self.theme();
 
-        let size = self.board_layout.w / 3.;
+        let size = width / 3.;
         let cell_size = size / 3.;
 
         for row in 0..3 {
             for col in 0..3 {
                 // draw section
-                let x = self.board_layout.x + (size * col as f32);
-                let y = self.board_layout.y + (size * row as f32);
+                let x = size * col as f32;
+                let y = size * row as f32;
                 draw_rectangle_lines(x, y, size, size, square_thick, square);
 
                 // draw cells

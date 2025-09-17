@@ -7,7 +7,7 @@ build = "build.rs"
 [profile.release]
 lto = true
 codegen-units = 1
-opt-level = "s"
+opt-level = 3
 
 [dependencies]
 macroquad = "0.4.14"
