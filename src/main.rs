@@ -13,17 +13,18 @@ use generate::Strategy;
 use macroquad::{miniquad::conf::Platform, prelude::*};
 use ui::UI;
 
+pub const SAMPLE_COUNT: i32 = 2;
+
 fn app() -> Conf {
     Conf {
         window_title: "Sudoru".to_owned(),
         window_width: 800,
         window_height: 800,
         window_resizable: true,
-        sample_count: 4,
+        sample_count: SAMPLE_COUNT,
         high_dpi: true,
         platform: Platform {
-            swap_interval: Some(-1),
-
+            // swap_interval: Some(-1),
             ..Default::default()
         },
         ..Default::default()

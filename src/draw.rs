@@ -23,16 +23,7 @@ impl UI {
         self.handle_input(board);
 
         if self.redraw {
-            let tex_size = self.board_texture.texture.size();
-            let zoom = dpi / tex_size.min_element();
-
-            set_camera(&Camera2D {
-                zoom: vec2(zoom, zoom),
-                target: tex_size / 2.0,
-                render_target: Some(self.board_texture.clone()),
-
-                ..Default::default()
-            });
+            set_camera(&self.board_texture_cam);
             clear_background(self.theme().bg);
 
             self.draw_cells(board); // draw cells first to avoid overlap

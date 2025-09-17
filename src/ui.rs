@@ -1,4 +1,5 @@
 use crate::{
+    SAMPLE_COUNT,
     board::{Board, Cell, PlaceError},
     theme,
 };
@@ -22,7 +23,6 @@ pub fn board_layout(screen_size: Vec2, padding: f32) -> Rect {
     }
 }
 
-#[derive(Clone)]
 pub struct UI {
     pub themes: (&'static Theme, &'static Theme),
 
@@ -34,6 +34,7 @@ pub struct UI {
 
     pub highlighted_cell: Option<usize>,
     pub board_texture: RenderTarget,
+    pub board_texture_cam: Camera2D,
     pub redraw: bool,
 }
 
@@ -49,6 +50,7 @@ impl UI {
 
             highlighted_cell: None,
             board_texture: render_target(1, 1),
+            board_texture_cam: Camera2D::default(),
             redraw: false,
         }
     }
@@ -74,7 +76,6 @@ impl UI {
         if new_screen_size != self.screen_size {
             self.screen_size = new_screen_size;
 
-            let dpi = screen_dpi_scale();
             self.redraw = true;
 
             // update drawing info
@@ -90,21 +91,32 @@ impl UI {
                 target_w as u32,
                 target_h as u32,
                 RenderTargetParams {
-                    sample_count: 4,
+                    sample_count: SAMPLE_COUNT,
                     depth: false,
                 },
             );
+
+            // update camera
+            let dpi = screen_dpi_scale();
+            self.board_texture_cam.render_target = Some(self.board_texture.clone());
+
+            let tex_size = self.board_texture.texture.size();
+            let zoom = dpi / tex_size.min_element();
+
+            self.board_texture_cam.zoom = vec2(zoom, zoom);
+            self.board_texture_cam.target = tex_size / 2.0;
+
+            self.board_texture_cam.render_target = Some(self.board_texture.clone());
         }
 
         // cell selection
         if let Some(sel) = self.get_cell_clicked() {
             if self.selected_cell == Some(sel.index()) {
                 self.selected_cell = None;
-                self.redraw = true;
             } else {
                 self.selected_cell = Some(sel.index());
-                self.redraw = true;
             }
+            self.redraw = true;
         }
     }
     pub fn insert_num(&self) -> Option<(usize, u8)> {
