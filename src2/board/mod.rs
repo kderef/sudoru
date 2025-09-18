@@ -1,9 +1,5 @@
-mod generate;
 mod index;
 mod placement;
-
-pub use generate::Strategy;
-pub use generate::generate_board;
 
 pub use index::Position;
 pub use placement::PlaceError;
@@ -37,9 +33,6 @@ impl Board {
     }
     pub const fn size(&self) -> usize {
         self.width() * self.height()
-    }
-    pub const fn segments(&self) -> usize {
-        SEGMENTS
     }
 }
 

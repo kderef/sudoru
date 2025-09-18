@@ -2,56 +2,68 @@
 
 mod board;
 mod draw;
-mod generate;
-mod test;
+mod game;
+mod game_draw;
+mod text;
 mod theme;
-mod ui;
+mod window;
 
-use std::{thread::sleep, time::Duration};
+use sdl2::event::{Event, WindowEvent};
 
-use generate::Strategy;
-use macroquad::{miniquad::conf::Platform, prelude::*};
-use ui::UI;
+use crate::game::Game;
+use crate::window::Window;
 
-pub const SAMPLE_COUNT: i32 = 2;
+pub fn main() -> Result<(), String> {
+    let mut window = Window::open("sudoru", 700, 700)?;
+    let ttf_context = sdl2::ttf::init()?;
 
-fn app() -> Conf {
-    Conf {
-        window_title: "Sudoru".to_owned(),
-        window_width: 800,
-        window_height: 800,
-        window_resizable: true,
-        sample_count: SAMPLE_COUNT,
-        high_dpi: true,
-        platform: Platform {
-            // swap_interval: Some(-1),
-            ..Default::default()
-        },
-        ..Default::default()
-    }
-}
+    let mut game = Game::new(&ttf_context)?;
 
-#[macroquad::main(app)]
-async fn main() {
-    let gen_strategy = Strategy::TryRandomSparse;
-    let mut board = generate::generate_board(gen_strategy);
+    let mut update: bool;
 
-    let mut ui = UI::new();
+    // initial frame
+    game.update(&window)?;
+    game.draw(window.draw())?;
+    window.present();
 
-    let min_frame_time = 1. / 30.;
+    'running: loop {
+        update = false;
 
-    loop {
-        let frame_time = get_frame_time();
-
-        ui.update();
-
-        ui.draw(&mut board);
-
-        // sleep for CPU's sake
-        if frame_time < min_frame_time {
-            let sleep_time = (min_frame_time - frame_time) * 1000.;
-            sleep(Duration::from_millis(sleep_time as u64));
+        for event in window.wait_for_events() {
+            match event {
+                Event::Quit { .. } => break 'running,
+                Event::Window { win_event, .. } => match win_event {
+                    WindowEvent::Resized(_, _)
+                    | WindowEvent::SizeChanged(_, _)
+                    | WindowEvent::Exposed => {
+                        update = true;
+                    }
+                    _ => {}
+                },
+                Event::MouseButtonUp {
+                    mouse_btn, x, y, ..
+                } => {
+                    game.handle_mouse(mouse_btn, (x, y).into());
+                    update = true;
+                }
+                Event::KeyUp { keycode, .. } => {
+                    if let Some(key) = keycode {
+                        game.handle_key(key);
+                        update = true;
+                    }
+                }
+                _ => {}
+            }
         }
-        next_frame().await;
+
+        if update {
+            println!("redraw");
+            game.update(&window)?;
+            game.draw(window.draw())?;
+
+            window.present();
+        }
     }
+
+    Ok(())
 }

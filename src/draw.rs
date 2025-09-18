@@ -1,162 +1,43 @@
-use crate::board::{CELL_STR, Position};
-use crate::ui::UI;
-use crate::{board::Board, theme::Theme};
-use macroquad::prelude::*;
+use sdl2::{
+    rect::{Point, Rect},
+    render::{Canvas, RenderTarget, WindowCanvas},
+};
 
-impl UI {
-    pub fn draw_borders(&self, _board: &Board) {
-        let Rect { w, h, x, y } = self.board_layout;
-        draw_rectangle_lines(
-            0., //
-            0.,
-            w,
-            h,
-            self.theme().border_thick,
-            self.theme().border_color,
-        );
+pub trait DrawCanvas {
+    fn draw_rect_lines(&mut self, rect: Rect, thick: u32);
+    fn draw_hline(&mut self, x1: i32, x2: i32, y: i32, thick: u32);
+    fn draw_vline(&mut self, y1: i32, y2: i32, x: i32, thick: u32);
+}
+
+impl<T: RenderTarget> DrawCanvas for Canvas<T> {
+    fn draw_rect_lines(&mut self, rect: Rect, thick: u32) {
+        let topl = rect.top_left();
+        let topr = rect.top_right();
+        let botl = rect.bottom_left();
+        // let botr = rect.bottom_right();
+
+        let _ = self.fill_rects(&[
+            Rect::new(topl.x, topl.y, rect.width(), thick),
+            Rect::new(botl.x, botl.y - thick as i32, rect.width(), thick),
+            Rect::new(topl.x, topl.y, thick, rect.height()),
+            Rect::new(topr.x - thick as i32, topr.y, thick, rect.height()),
+        ]);
+
+        // let _ = self.draw_line(topl, topr);
+        // let _ = self.draw_line(topl, botl);
+        // let _ = self.draw_line(topr, botr);
+        // let _ = self.draw_line(botr, botl);
     }
+    fn draw_hline(&mut self, x1: i32, x2: i32, y: i32, thick: u32) {
+        let y = y - thick as i32 / 2;
 
-    pub fn draw(&mut self, board: &mut Board) {
-        clear_background(self.theme().bg);
-        let dpi = screen_dpi_scale();
+        let rect = Rect::new(x1, y, (x2 - x1) as u32, thick as u32);
 
-        self.handle_input(board);
-
-        if self.redraw {
-            set_camera(&self.board_texture_cam);
-            clear_background(self.theme().bg);
-
-            self.draw_cells(board); // draw cells first to avoid overlap
-            self.draw_borders(board);
-            self.draw_squares(board);
-
-            set_default_camera();
-        }
-
-        let Vec2 { x, y } = self.board_layout.point();
-        let size = self.board_layout.size();
-        let texture = &self.board_texture.texture;
-
-        draw_texture_ex(
-            texture,
-            x,
-            y,
-            WHITE,
-            DrawTextureParams {
-                dest_size: Some(size),
-                ..Default::default()
-            },
-        );
+        self.fill_rect(rect);
     }
-
-    pub fn draw_cell_num(&self, cell: Rect, num: u8, highlight: bool) {
-        let font = None;
-        let font_size = self.font_size;
-
-        let num_str = CELL_STR[num as usize - 1];
-
-        let text_size = measure_text(num_str, font, font_size, 1.);
-        let offset = vec2(text_size.width / 2., 0.);
-
-        let text_pos = cell.center() - offset;
-        let color = if highlight {
-            self.theme().cell_highlight
-        } else {
-            self.theme().cell_fg
-        };
-
-        draw_text_ex(
-            num_str,
-            text_pos.x,
-            text_pos.y,
-            TextParams {
-                font,
-                font_size,
-                color,
-                ..Default::default()
-            },
-        );
-    }
-    pub fn draw_cells(&self, board: &Board) {
-        let width = self.board_texture.texture.width();
-
-        let cell_size = width / 9.;
-        let start_x = 0.; //self.board_layout.x;
-        let start_y = 0.; //self.board_layout.y;
-
-        let mut cell = Rect::new(start_x, start_y, cell_size, cell_size);
-
-        // Draw the selected cell
-        if let Some(pos) = self.selected_cell {
-            let (x, y) = (pos % board.height(), pos / board.width());
-            let (x, y) = (x as f32 * cell.w + start_x, y as f32 * cell.h + start_y);
-
-            draw_rectangle(x, y, cell.w, cell.h, self.theme().selected_bg);
-        }
-
-        for y in 0..board.height() {
-            for x in 0..board.width() {
-                let index = (x, y).index();
-                if let Some(Some(num)) = board.get(index) {
-                    let highlight = Some(index) == self.highlighted_cell;
-                    self.draw_cell_num(cell, *num, highlight);
-                }
-                cell.x += cell.w;
-            }
-            cell.x = start_x;
-            cell.y += cell.h;
-        }
-    }
-
-    pub fn handle_input(&mut self, board: &mut Board) {
-        if let Some((index, num)) = self.insert_num() {
-            self.redraw = true;
-            if let Err(e) = board.place(index, Some(num)) {
-                println!("{index} => {e:?}");
-                self.highlight(&board, index, Some(num), e);
-            } else {
-                self.highlighted_cell = None;
-            }
-        }
-    }
-
-    pub fn draw_squares(&self, _board: &Board) {
-        let width = self.board_texture.texture.width();
-
-        let &Theme {
-            square_thick,
-            square_color: square,
-            cell_thick,
-            cell_border: cell_color,
-            ..
-        } = self.theme();
-
-        let size = width / 3.;
-        let cell_size = size / 3.;
-
-        for row in 0..3 {
-            for col in 0..3 {
-                // draw section
-                let x = size * col as f32;
-                let y = size * row as f32;
-                draw_rectangle_lines(x, y, size, size, square_thick, square);
-
-                // draw cells
-                for cell_row in 0..3 {
-                    for cell_col in 0..3 {
-                        let cell = Rect::new(
-                            x + cell_size * cell_col as f32,
-                            y + cell_size * cell_row as f32,
-                            cell_size,
-                            cell_size,
-                        );
-
-                        draw_rectangle_lines(
-                            cell.x, cell.y, cell.w, cell.h, cell_thick, cell_color,
-                        );
-                    }
-                }
-            }
-        }
+    fn draw_vline(&mut self, y1: i32, y2: i32, x: i32, thick: u32) {
+        let x = x - thick as i32 / 2;
+        let rect = Rect::new(x, y1, thick as u32, (y2 - y1) as u32);
+        self.fill_rect(rect);
     }
 }

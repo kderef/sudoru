@@ -1,3 +1,10 @@
 fn main() {
-    static_vcruntime::metabuild();
+    // static_vcruntime::metabuild();
+    if cfg!(target_os = "macos") {
+        println!("cargo:rustc-link-arg=-L/opt/homebrew/lib");
+        println!("cargo:rustc-link-arg=-Wl,-rpath,@loader_path");
+    }
+
+    #[cfg(target_os = "linux")]
+    println!("cargo:rustc-link-arg=-Wl,-rpath,$ORIGIN");
 }

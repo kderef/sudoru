@@ -1,4 +1,4 @@
-use sdl2::rect::Point;
+use macroquad::math::Vec2;
 
 use super::*;
 
@@ -35,9 +35,9 @@ impl Position for (usize, usize) {
         self
     }
 }
-impl Position for Point {
+impl Position for Vec2 {
     fn coords(self) -> (usize, usize) {
-        (self.x as usize, self.y as usize)
+        (self.x.floor() as usize, self.y.floor() as usize)
     }
     fn index(self) -> usize {
         let (x, y) = self.coords();
